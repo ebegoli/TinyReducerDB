@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <float.h>
 #include "gmm.h"
 
-#define MAX_ITER 100  // Maximum number of EM iterations
 #define THRESHOLD 1e-6  // Convergence threshold
 
 // Gaussian PDF for a 2D point
@@ -33,99 +31,62 @@ static void init_gmm(GMM *model, int k) {
         model->covariances[i][0][0] = 1.0;
         model->covariances[i][1][1] = 1.0;
         model->covariances[i][0][1] = model->covariances[i][1][0] = 0.0;
+        model->cluster_counts[i] = 0;
     }
 }
 
-// E-step: Compute responsibilities (posterior probabilities)
-static void e_step(const GMM *model, double data[][2], int n, double responsibilities[][MAX_CLUSTERS]) {
-    for (int i = 0; i < n; ++i) {
-        double sum = 0.0;
-        for (int j = 0; j < model->num_clusters; ++j) {
-            responsibilities[i][j] = model->weights[j] * gaussian_pdf(data[i], model->means[j], model->covariances[j]);
-            sum += responsibilities[i][j];
-        }
-        // Normalize responsibilities for each data point
-        for (int j = 0; j < model->num_clusters; ++j) {
-            responsibilities[i][j] /= sum;
-        }
+
+/** Support for incremental updates:
+When a new data point arrives, run responsibilities (E-step): Compute the responsibilities of the new point for each cluster.
+run an m-step (Incremental Update): Update the parameters (means, covariances, and weights) using running estimates.
+*/
+
+// E-step: Compute the responsibilities for a new data point
+static void compute_responsibilities(const GMM *model, double new_point[2], double *responsibilities) {
+    double sum = 0.0;
+    for (int j = 0; j < model->num_clusters; ++j) {
+        responsibilities[j] = model->weights[j] * gaussian_pdf(new_point, model->means[j], model->covariances[j]);
+        sum += responsibilities[j];
+    }
+    // Normalize responsibilities
+    for (int j = 0; j < model->num_clusters; ++j) {
+        responsibilities[j] /= sum;
     }
 }
 
-// M-step: Update the GMM parameters
-static void m_step(GMM *model, double data[][2], int n, double responsibilities[][MAX_CLUSTERS]) {
-    int k = model->num_clusters;
+// Incrementally update the GMM parameters
+void update_gmm(GMM *model, double new_point[2]) {
+    double responsibilities[MAX_CLUSTERS];
+    compute_responsibilities(model, new_point, responsibilities);
 
-    for (int j = 0; j < k; ++j) {
-        double sum_resp = 0.0;
-        double mean[2] = {0.0, 0.0};
-        double cov[2][2] = { {0.0, 0.0}, {0.0, 0.0} };
+    // Update parameters for each cluster
+    for (int j = 0; j < model->num_clusters; ++j) {
+        double r = responsibilities[j];
+        model->cluster_counts[j] += 1;
+        double n_j = model->cluster_counts[j];
 
-        // Compute mean and weighted covariance
-        for (int i = 0; i < n; ++i) {
-            double r = responsibilities[i][j];
-            sum_resp += r;
+        // Incremental mean update using Welford’s method
+        double old_mean[2] = { model->means[j][0], model->means[j][1] };
+        model->means[j][0] += (r / n_j) * (new_point[0] - old_mean[0]);
+        model->means[j][1] += (r / n_j) * (new_point[1] - old_mean[1]);
 
-            mean[0] += r * data[i][0];
-            mean[1] += r * data[i][1];
-        }
-        mean[0] /= sum_resp;
-        mean[1] /= sum_resp;
+        // Incremental covariance update
+        double diff[2] = { new_point[0] - model->means[j][0], new_point[1] - model->means[j][1] };
+        model->covariances[j][0][0] += r * (diff[0] * diff[0] - model->covariances[j][0][0]) / n_j;
+        model->covariances[j][0][1] += r * (diff[0] * diff[1] - model->covariances[j][0][1]) / n_j;
+        model->covariances[j][1][0] = model->covariances[j][0][1];
+        model->covariances[j][1][1] += r * (diff[1] * diff[1] - model->covariances[j][1][1]) / n_j;
 
-        for (int i = 0; i < n; ++i) {
-            double r = responsibilities[i][j];
-            double diff[2] = { data[i][0] - mean[0], data[i][1] - mean[1] };
-            cov[0][0] += r * diff[0] * diff[0];
-            cov[0][1] += r * diff[0] * diff[1];
-            cov[1][0] += r * diff[1] * diff[0];
-            cov[1][1] += r * diff[1] * diff[1];
-        }
-        cov[0][0] /= sum_resp;
-        cov[0][1] /= sum_resp;
-        cov[1][0] /= sum_resp;
-        cov[1][1] /= sum_resp;
-
-        // Update parameters
-        model->means[j][0] = mean[0];
-        model->means[j][1] = mean[1];
-        model->covariances[j][0][0] = cov[0][0];
-        model->covariances[j][0][1] = cov[0][1];
-        model->covariances[j][1][0] = cov[1][0];
-        model->covariances[j][1][1] = cov[1][1];
-        model->weights[j] = sum_resp / n;
+        // Update the weights
+        model->weights[j] = (double)model->cluster_counts[j] / (double)(n_j);
     }
 }
 
-// Compute log-likelihood of the data given the model
-static double compute_log_likelihood(const GMM *model, double data[][2], int n) {
-    double log_likelihood = 0.0;
-    for (int i = 0; i < n; ++i) {
-        double sum = 0.0;
-        for (int j = 0; j < model->num_clusters; ++j) {
-            sum += model->weights[j] * gaussian_pdf(data[i], model->means[j], model->covariances[j]);
-        }
-        log_likelihood += log(sum);
-    }
-    return log_likelihood;
-}
-
-// Fit GMM using the EM algorithm
-void fit_gmm(GMM *model, double data[][2], int n, int k) {
-    init_gmm(model, k);
-
-    double responsibilities[n][MAX_CLUSTERS];
-    double prev_log_likelihood = -DBL_MAX;
-
-    for (int iter = 0; iter < MAX_ITER; ++iter) {
-        e_step(model, data, n, responsibilities);
-        m_step(model, data, n, responsibilities);
-
-        double log_likelihood = compute_log_likelihood(model, data, n);
-        printf("Iteration %d: Log-Likelihood = %f\n", iter + 1, log_likelihood);
-
-        if (fabs(log_likelihood - prev_log_likelihood) < THRESHOLD) {
-            printf("Converged after %d iterations.\n", iter + 1);
-            break;
-        }
-        prev_log_likelihood = log_likelihood;
+// Print GMM parameters to the console
+void print_gmm(const GMM *model) {
+    printf("GMM Model with %d clusters:\n", model->num_clusters);
+    for (int i = 0; i < model->num_clusters; ++i) {
+        printf("Cluster %d: Mean = (%f, %f), Weight = %f\n", 
+               i, model->means[i][0], model->means[i][1], model->weights[i]);
     }
 }
