@@ -20,6 +20,6 @@ void demo_tiny_reducer_db() {
 }
 
 int main() {
-    demo_tiny_reducer_db();
+    demo_tiny_reducer_db();    
     return 0;
 }
