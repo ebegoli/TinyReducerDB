@@ -14,5 +14,8 @@ typedef struct {
 void fit_gmm(GMM *model, double data[][2], int n, int k);
 void print_gmm(const GMM *model);
 void update_gmm(GMM *model, double new_point[2]);  // For incremental updates
+void query_cluster(const GMM *model, int cluster_id);
+double query_density(const GMM *model, double point[2], int cluster_id);
+
 
 #endif  // GMM_H
