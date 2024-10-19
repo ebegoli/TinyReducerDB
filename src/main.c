@@ -47,6 +47,20 @@ void demo_tiny_reducer_db() {
     // Query density at the same point for the entire mixture
     printf("Density at point (5.0, 5.0) for the entire mixture: %f\n", 
            query_density(&model, point, -1));
+
+        // Save the GMM model to a binary file
+    printf("Saving GMM to 'gmm_model.bin'...\n");
+    if (save_gmm(&model, "gmm_model.bin") == 0) {
+        printf("GMM model saved successfully.\n");
+    }
+
+    // Load the GMM model from the binary file
+    GMM loaded_model;
+    printf("Loading GMM from 'gmm_model.bin'...\n");
+    if (load_gmm(&loaded_model, "gmm_model.bin") == 0) {
+        printf("GMM model loaded successfully.\n");
+        print_gmm(&loaded_model);
+    }
         
 }
 
