@@ -5,6 +5,32 @@
 
 #define THRESHOLD 1e-6  // Convergence threshold
 
+#define DB_PATH "data/tiny_data.bin"
+
+// Save GMM parameters to binary file.
+void save_gmm_to_db(const GMM *model) {
+    FILE *file = fopen(DB_PATH, "wb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+    fwrite(model, sizeof(GMM), 1, file);
+    fclose(file);
+    printf("GMM model saved to %s\n", DB_PATH);
+}
+
+// Load GMM parameters from binary file.
+void load_gmm_from_db(GMM *model) {
+    FILE *file = fopen(DB_PATH, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+    fread(model, sizeof(GMM), 1, file);
+    fclose(file);
+    printf("GMM model loaded from %s\n", DB_PATH);
+}
+
 // Gaussian PDF for a 2D point
 static double gaussian_pdf(double x[2], double mean[2], double cov[2][2]) {
     double det = cov[0][0] * cov[1][1] - cov[0][1] * cov[1][0];
