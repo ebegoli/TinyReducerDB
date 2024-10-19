@@ -1,13 +1,16 @@
-
 #ifndef GMM_H
 #define GMM_H
 
+#define MAX_CLUSTERS 5  // Max number of GMM clusters
+
 typedef struct {
-    float mean;
-    float variance;
+    double means[MAX_CLUSTERS][2];      // Mean vectors (2D example)
+    double covariances[MAX_CLUSTERS][2][2];  // Covariance matrices
+    double weights[MAX_CLUSTERS];       // Mixture weights
+    int num_clusters;                   // Number of clusters
 } GMM;
 
-// Function to compute the probability of a given input for the GMM
-float gmm_probability(GMM *gmm, float x);
+void fit_gmm(GMM *model, double data[][2], int n, int k);
+void print_gmm(const GMM *model);
 
-#endif
+#endif  // GMM_H
