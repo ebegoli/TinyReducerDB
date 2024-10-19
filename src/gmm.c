@@ -31,6 +31,48 @@ void load_gmm_from_db(GMM *model) {
     printf("GMM model loaded from %s\n", DB_PATH);
 }
 
+// Save GMM parameters to a binary file
+int save_gmm(const GMM *model, const char *filename) {
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        perror("Error opening file for writing");
+        return -1;
+    }
+
+    // Write the number of clusters
+    fwrite(&model->num_clusters, sizeof(int), 1, file);
+
+    // Write means, covariances, weights, and cluster counts
+    fwrite(model->means, sizeof(double), MAX_CLUSTERS * 2, file);
+    fwrite(model->covariances, sizeof(double), MAX_CLUSTERS * 2 * 2, file);
+    fwrite(model->weights, sizeof(double), MAX_CLUSTERS, file);
+    fwrite(model->cluster_counts, sizeof(int), MAX_CLUSTERS, file);
+
+    fclose(file);
+    return 0;  // Success
+}
+
+// Load GMM parameters from a binary file
+int load_gmm(GMM *model, const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("Error opening file for reading");
+        return -1;
+    }
+
+    // Read the number of clusters
+    fread(&model->num_clusters, sizeof(int), 1, file);
+
+    // Read means, covariances, weights, and cluster counts
+    fread(model->means, sizeof(double), MAX_CLUSTERS * 2, file);
+    fread(model->covariances, sizeof(double), MAX_CLUSTERS * 2 * 2, file);
+    fread(model->weights, sizeof(double), MAX_CLUSTERS, file);
+    fread(model->cluster_counts, sizeof(int), MAX_CLUSTERS, file);
+
+    fclose(file);
+    return 0;  // Success
+}
+
 // Gaussian PDF for a 2D point
 static double gaussian_pdf(double x[2], double mean[2], double cov[2][2]) {
     double det = cov[0][0] * cov[1][1] - cov[0][1] * cov[1][0];
