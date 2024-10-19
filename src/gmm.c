@@ -108,6 +108,41 @@ void update_gmm(GMM *model, double new_point[2]) {
     }
 }
 
+//GMM cluster API
+// Query cluster details (e.g., mean, covariance, and weight)
+void query_cluster(const GMM *model, int cluster_id) {
+    if (cluster_id < 0 || cluster_id >= model->num_clusters) {
+        printf("Invalid cluster ID: %d\n", cluster_id);
+        return;
+    }
+
+    printf("Cluster %d:\n", cluster_id);
+    printf("  Mean = (%f, %f)\n", model->means[cluster_id][0], model->means[cluster_id][1]);
+    printf("  Covariance Matrix:\n");
+    printf("    [%f, %f]\n", model->covariances[cluster_id][0][0], model->covariances[cluster_id][0][1]);
+    printf("    [%f, %f]\n", model->covariances[cluster_id][1][0], model->covariances[cluster_id][1][1]);
+    printf("  Weight = %f\n", model->weights[cluster_id]);
+}
+
+// Query the density (PDF) at a specific point for a given cluster or the entire mixture
+double query_density(const GMM *model, double point[2], int cluster_id) {
+    if (cluster_id >= 0 && cluster_id < model->num_clusters) {
+        // Return the density for the specified cluster
+        return gaussian_pdf(point, model->means[cluster_id], model->covariances[cluster_id]);
+    } else if (cluster_id == -1) {
+        // Return the density for the entire mixture model
+        double total_density = 0.0;
+        for (int j = 0; j < model->num_clusters; ++j) {
+            total_density += model->weights[j] * gaussian_pdf(point, model->means[j], model->covariances[j]);
+        }
+        return total_density;
+    } else {
+        printf("Invalid cluster ID: %d\n", cluster_id);
+        return -1.0;
+    }
+}
+
+
 // Print GMM parameters to the console
 void print_gmm(const GMM *model) {
     printf("GMM Model with %d clusters:\n", model->num_clusters);
