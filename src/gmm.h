@@ -17,5 +17,9 @@ void update_gmm(GMM *model, double new_point[2]);  // For incremental updates
 void query_cluster(const GMM *model, int cluster_id);
 double query_density(const GMM *model, double point[2], int cluster_id);
 
+// binary storage functions
+int save_gmm(const GMM *model, const char *filename);
+int load_gmm(GMM *model, const char *filename);
+
 
 #endif  // GMM_H
