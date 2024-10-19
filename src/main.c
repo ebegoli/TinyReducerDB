@@ -20,6 +20,9 @@ void demo_tiny_reducer_db() {
         printf("After adding point (%f, %f):\n", new_data[i][0], new_data[i][1]);
         print_gmm(&model);
     }
+
+    // Save to DB
+    save_gmm_to_db(&model);
     
     // Load from DB and print
     GMM loaded_model;
@@ -33,6 +36,9 @@ void demo_tiny_reducer_db() {
         print_gmm(&model);
     }
 
+    // Save to DB
+    save_gmm_to_db(&model);
+    
     /** Cluster querying. 
     */
     // Query cluster 0 details
