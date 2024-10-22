@@ -1,13 +1,17 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
-
-TARGET = tiny_reducer_db
-SRC = main.c tiny_reducer_db.c gmm.c
+CFLAGS = -Wall -g
+TARGET = TinyReducerDB
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-    $(CC) $(CFLAGS) -o $@ $(SRC)
+$(TARGET): main.o GMM.o
+	$(CC) $(CFLAGS) -o $(TARGET) main.o GMM.o
+
+main.o: main.c GMM.h
+	$(CC) $(CFLAGS) -c main.c
+
+GMM.o: GMM.c GMM.h
+	$(CC) $(CFLAGS) -c GMM.c
 
 clean:
-    rm -f $(TARGET)
+	rm -f *.o $(TARGET)

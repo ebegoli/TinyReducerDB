@@ -1,25 +1,30 @@
 #ifndef GMM_H
 #define GMM_H
 
-#define MAX_CLUSTERS 5  // Max number of clusters
+#include <stdint.h>
 
+// Optimized GMMEntry for multivariate data (e.g., multidimensional Gaussian components)
 typedef struct {
-    double means[MAX_CLUSTERS][2];      // Mean vectors (2D case)
-    double covariances[MAX_CLUSTERS][2][2];  // Covariance matrices
-    double weights[MAX_CLUSTERS];       // Mixture weights
-    int cluster_counts[MAX_CLUSTERS];   // Number of points assigned to each cluster
-    int num_clusters;                   // Number of clusters
-} GMM;
+    uint8_t num_components;     // 8-bit integer for the number of components
+    uint16_t **quantized_means;  // 2D array for quantized multivariate means
+    uint16_t **quantized_variances; // 2D array for quantized multivariate variances
+    uint8_t *quantized_weights;  // 8-bit quantized weights
+    int dimensions;              // Dimensions of multivariate data
+} GMMEntryOptimized;
 
-void fit_gmm(GMM *model, double data[][2], int n, int k);
-void print_gmm(const GMM *model);
-void update_gmm(GMM *model, double new_point[2]);  // For incremental updates
-void query_cluster(const GMM *model, int cluster_id);
-double query_density(const GMM *model, double point[2], int cluster_id);
+// Quantization and delta encoding functions
+uint16_t* quantize_floats(float* values, int num_values, float min, float max, int bit_depth);
+float* dequantize_floats(uint16_t* quantized_values, int num_values, float min, float max, int bit_depth);
+void delta_encode(uint16_t* data, int num_values);
+void delta_decode(uint16_t* data, int num_values);
 
-// binary storage functions
-int save_gmm(const GMM *model, const char *filename);
-int load_gmm(GMM *model, const char *filename);
+// GMM database operations for optimized multivariate values
+int insert_gmm_optimized(GMMEntryOptimized* gmm);
+float gmm_probability_optimized(GMMEntryOptimized* gmm, float* values);
+float* sample_from_gmm_optimized(GMMEntryOptimized* gmm);
 
+// Functions for constructing and deconstructing GMMEntryOptimized
+GMMEntryOptimized* create_gmm_entry(int num_components, int dimensions, float** means, float** variances, float* weights);
+void free_gmm_entry(GMMEntryOptimized* gmm);
 
-#endif  // GMM_H
+#endif // GMM_H
