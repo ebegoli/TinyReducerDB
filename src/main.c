@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "gmm.h"
 
 int main() {
@@ -10,7 +11,7 @@ int main() {
     float* means_ptrs[3] = {means[0], means[1], means[2]};
     float* variances_ptrs[3] = {variances[0], variances[1], variances[2]};
 
-    GMMEntryOptimized* gmm = create_gmm_entry(3, 2, means_ptrs, variances_ptrs, weights);
+    GMMEntry* gmm = create_gmm_entry(3, 2, means_ptrs, variances_ptrs, weights);
 
     // Insert the GMM entry
     int id = insert_gmm_optimized(gmm);
